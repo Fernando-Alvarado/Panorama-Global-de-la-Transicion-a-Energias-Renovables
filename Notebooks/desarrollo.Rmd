@@ -103,6 +103,7 @@ ggplot(top_renew,
 ```{r}
 # Obteniendo las tasas de crecimiento para cada continente a partir regresión lineal
 tc_contientes <- datos %>%
+  dplyr::filter(Year >= 2000) %>% 
   dplyr::group_by(Continent) %>%
   dplyr::reframe(
     broom::tidy(lm(Renewables ~ Year))
@@ -125,8 +126,8 @@ ggplot(tc_contientes, aes(x = reorder(Continent, estimate), y = estimate)) +
             nudge_x = 0.3, size = 3.5) +
   coord_flip() +
   expand_limits(y = c(
-    min(tc_contientes$estimate) * 1.1,
-    max(tc_contientes$estimate) * 1.1
+    min(tc_contientes$estimate) * 1.2,
+    max(tc_contientes$estimate) * 1.2
   )) +
   labs(
     title = "Crecimiento anual del consumo de energías renovables",
@@ -256,19 +257,22 @@ ggplot(disp_cont,
 ### Los países de bajos ingresos presentan una desviación estándar consistentemente baja a lo largo del periodo analizado, lo que refleja una estabilidad en la adopción de energías renovables entre los miembros del grupo. Esta homogeneidad sugiere que, a diferencia de los grupos de ingresos medios —donde se observan trayectorias divergentes entre países líderes y rezagados—, las naciones de bajos ingresos comparten barreras estructurales similares que limitan de manera uniforme su transición energética.
 
 ```{r dispersion_continente_boxplot, message=FALSE, warning=FALSE}
-disp_cont_resumen <- disp_cont 
-
 ggplot(disp_cont_resumen,
-       aes(x = Continent, y = sd_renew, color = Continent)) +
-  geom_boxplot() +
+       aes(x = Continent, y = sd_renew, fill = Continent)) +
+  geom_boxplot(alpha = 0.8, show.legend = FALSE) +  # Elimina la leyenda
   labs(
     title = "Dispersión del % de renovables entre países por continente",
-    subtitle = "Distribución de la desviación estándar anual (2000–2024)",
+    subtitle = "Distribución de la desviación estándar anual (2000-2024)",
     x = "Continente",
     y = "Desviación estándar del % de renovables"
   ) +
-  theme_minimal()
-
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set2") +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "plain", size = 14),
+    plot.subtitle = element_text(hjust = 0.5, face = "plain", size = 12),
+    legend.position = "none"
+  )
 ```
 ### La figura muestra que la dispersión del porcentaje de energías renovables entre países difiere claramente por continente. África presenta las desviaciones estándar más altas, lo que indica una gran heterogeneidad en sus matrices energéticas: conviven países muy dependientes de fósiles con otros mucho más renovables. Las Américas y Asia se ubican en un nivel intermedio de dispersión, mientras que Europa exhibe los valores más bajos, sugiriendo que los países europeos son relativamente más homogéneos en la participación de renovables. En el caso de Oceanía, la dispersión es similar a la europea, aunque esta comparación debe interpretarse con cautela por el menor número de países en la región.
 
