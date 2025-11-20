@@ -11,6 +11,13 @@ library(rpart.plot)
 library(Metrics)
 library(knitr)
 #Paqueta
+
+# Story telling
+# Como estimaos que va a crecer y cual es la mas util 
+# Analisis de las energias renovables, cual es la mas eficiente, la que mas se usa, etc
+#
+#
+
 source(here("ShinyApp", "modulos", "funcion_main.R")) # Funcion para traer las graficas
 
 #--------Carga de datos---------------------------------------------------------------------
