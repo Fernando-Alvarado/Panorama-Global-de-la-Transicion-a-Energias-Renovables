@@ -2,6 +2,7 @@
 # APP.R - MONITOR GLOBAL DE TRANSICIÓN ENERGÉTICA
 # ==============================================================================
 
+
 library(shiny)
 library(leaflet)
 library(dplyr)
@@ -31,6 +32,8 @@ library(tidyr)
 library(plotly)
 library(RColorBrewer)
 library(forcats) 
+
+
 
 # ==============================================================================
 # 1. CONFIGURACIÓN TÉCNICA Y PALETAS
@@ -145,6 +148,35 @@ if ("World" %in% er_clean$entity) {
 # Carga de mapa (usando paquete rnaturalearthdata interno)
 world_sf <- ne_countries(scale = "medium", returnclass = "sf") %>% select(iso_a3, geometry)
 
+ 
+# ------------  INDICADORES -----------------------------------------------------------------------------------------------------------------------------------
+
+# Cálculo de total renovables por AÑO (sumando todos los países)
+cruce_er_por_anio <- er_data |>
+  mutate(
+    total_renovables = rowSums(
+      cbind(
+        electricity_from_wind_t_wh__modern_renewable_prod,
+        electricity_from_hydro_t_wh__modern_renewable_prod,
+        electricity_from_solar_t_wh__modern_renewable_prod,
+        other_renewables_including_bioenergy_t_wh__modern_renewable_prod
+      ),
+      na.rm = TRUE
+    )
+  ) |>
+  group_by(year) |>
+  summarise(total_renovables_twh = sum(total_renovables, na.rm = TRUE))
+
+# Año inicial y valor base (referencia) #Segundo indicador
+primer_anio <- min(cruce_er_por_anio$year, na.rm = TRUE)
+
+base_total_renovables <- cruce_er_por_anio |>
+  filter(year == primer_anio) |>
+  pull(total_renovables_twh)
+
+# -----------------------------------------------------------------------------------------------------------------------------------------------
+
+
 # ==============================================================================
 # 3. UI
 # ==============================================================================
@@ -223,23 +255,46 @@ div(class = "container-fluid px-4 mb-5",
                 # ==========================================================
                 tabPanel("Historia: Comparativa por Fuente (TWh)", br(),
 
-                    fluidRow(
-                        column(12,
-                               div(class="d-flex align-items-center bg-light p-3 rounded mb-3",
-                                   strong("Línea de Tiempo: ", class="me-3"),
-                                   div(style="flex-grow: 1;",
-                                       uiOutput("slider_global_ui")
-                                   )
-                               )
-                        )
-                    ),
+         fluidRow(
+           column(12,
+                  div(class = "d-flex align-items-center bg-light p-3 rounded mb-3",
+                      strong("Línea de Tiempo: ", class = "me-3"),
+                      div(style = "flex-grow: 1;",
+                          uiOutput("slider_global_ui")
+                      )
+                  )
+           )
+         ),
 
-                    fluidRow(
-                        column(12,
-                               plotlyOutput("global_plot", height = "500px")
-                        )
-                    )
-                ),
+         fluidRow(
+           column(12,
+                  plotlyOutput("global_plot", height = "500px")
+           )
+         ),
+
+         br(),
+
+         # ====== INDICADORES DEBAJO DE LA GRÁFICA ======
+         fluidRow(
+           column(
+             width = 3,
+             div(class = "p-3 bg-light rounded shadow-sm mb-3",
+                 h6("Total renovables (TWh)"),
+                 h3(textOutput("ind_total_renovables"))
+             )
+           ),
+           column(
+             width = 3,
+             div(class = "p-3 bg-light rounded shadow-sm mb-3",
+                 h6("Crecimiento total vs inicio"),
+                 h3(textOutput("ind_crecimiento_vs_inicio"),
+                   class = "mb-0 small text-muted")
+             )
+           )
+         )
+),
+
+
 
                 # ==========================================================
                 # TAB 2 - PROYECCIÓN IA
@@ -436,6 +491,62 @@ server <- function(input, output, session) {
     plot_ly(dat, x = ~year, y = ~TWh, color = ~Fuente, colors = cols_g, type = 'scatter', mode = 'lines+markers', fill = 'tozeroy', hovertemplate = "<b>%{y:,.0f} TWh</b>") %>%
       layout(yaxis = list(title = "Generación (TWh)"), legend = list(orientation = "h", y = 1.1), hovermode = "x unified")
   })
+
+####-----Indicadora para la grafica -----------------------------------------------------------------------------------------------------
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+# Filtrar por año seleccionado
+  datos_filtrados <- reactive({
+    req(input$anim_year)
+
+    cruce_er_por_anio |>
+      filter(year == input$anim_year)
+  })
+
+  # ===== INDICADOR: Total renovables globales (TWh) =====
+  output$ind_total_renovables <- renderText({
+    df <- datos_filtrados()
+
+    if (nrow(df) == 0) {
+      return("Sin datos")
+    }
+
+    valor <- df$total_renovables_twh[1]
+
+    # Formato final
+    valor_formateado <- format(round(valor, 1), big.mark = ",")
+    paste0(valor_formateado, " TWh")
+  })
+
+
+# Segundo indicador:
+ output$ind_crecimiento_vs_inicio <- renderText({
+    df <- datos_filtrados()
+
+    # Validaciones básicas
+    if (nrow(df) == 0 || is.na(base_total_renovables) || base_total_renovables == 0) {
+      return("Sin datos")
+    }
+
+    valor_actual <- df$total_renovables_twh[1]
+
+    # Diferencia absoluta y porcentaje vs año inicial
+    dif_abs <- valor_actual - base_total_renovables
+    dif_pct <- (valor_actual - base_total_renovables) / base_total_renovables * 100
+
+    dif_abs_fmt <- format(round(dif_abs, 1), big.mark = ",")
+    dif_pct_fmt <- format(round(dif_pct, 1), big.mark = ",")
+
+    # Ejemplo: "+10,045.6 TWh (+22.3 %)"
+    signo <- ifelse(dif_abs >= 0, "+", "")
+
+    paste0(signo, dif_abs_fmt, " TWh (", signo, dif_pct_fmt, " %)")
+  })
+
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+#-----------------------------------------------------------------------------------------------------------------
+
+
   
   output$forecast_plot <- renderPlotly({
     p_dat <- pred_data %>% mutate(Energy_Type = ifelse(Type == "Fossil", "Fósiles", "Renovables"))
@@ -491,7 +602,7 @@ server <- function(input, output, session) {
     graficas()[[4]]            
   })
 
-
+### ------------------------------------------------------------------------------------------------------------
 
 
 }
