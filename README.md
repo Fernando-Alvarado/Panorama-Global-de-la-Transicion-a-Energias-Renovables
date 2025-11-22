@@ -32,20 +32,9 @@ RENEWABLE-ENERGY/
 │
 ├── ShinyApp/                        # Carpeta de PRODUCCIÓN del Dashboard (Despliegue)
 
-│
-└── Organizacion/                    # Documentación y gestión del proyecto
-    ├── Data/                        # Metadatos
-    ├── Notebooks/                   # Notas adicionales
-    └── README.md                    # Este archivo
 
 
-### 📂 Detalle de carpetas clave:
-
-* **Notebooks:** Aquí ocurre el "trabajo sucio". Se limpian los datasets y se entrenan los modelos antes de pasarlos a la app.
-
-* **ShinyApp:** Es un directorio autocontenido. Contiene todo lo necesario (`app.r`, datos y modelos) para que la aplicación funcione en el servidor de *shinyapps.io* sin dependencias externas.
-
-## 4. Tecnologías Utilizadas
+## 3. Tecnologías Utilizadas
 
 * **Lenguaje:** R
 
